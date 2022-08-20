@@ -1,0 +1,29 @@
+# IDEs
+.idea
+.vscode
+.sublime-project
+
+*.bak
+
+# VIM
+*.swp
+*.swo
+
+temp
+.tmp
+.sass-cache
+.DS_Store
+app/.DS_Store
+
+coverage/
+jest-coverage/
+dist
+
+test-artifacts
+test-builds
+build-artifacts
+
+npm-debug.log
+yarn-error.log
+node_modules*
+package-lock.json
