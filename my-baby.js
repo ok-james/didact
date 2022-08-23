@@ -67,7 +67,7 @@ function handleProps(element, preProps, currProps) {
     element.addEventListener(eventName, currProps[key])
   })
   
-  // 删除时间
+  // 删除事件
   Object.keys(preProps).filter((key) => isEvent(key) && !currProps[key]).forEach(key => {
     let eventName = key.slice(2)
     eventName = eventName.toLowerCase()
@@ -81,14 +81,17 @@ let nextWorkFiber = null
 let wipRoot = null
 let currentWipRoot = null
 // 要删除的 fiber
-let removeFibers = []
+let removeFibers = null
 
 function render(root, container) {
   wipRoot = {
-    type: root.type,
-    props: root.props,
+    props: {
+      children: [root],
+    },
     dom: container,
+    alternate: currentWipRoot,
   }
+  removeFibers = []
   nextWorkFiber = wipRoot
 }
 
@@ -120,7 +123,7 @@ function handleFunctionalFiber(fiber) {
   currentHookFiber = fiber
   currentHookFiber.hooks = []
   currentHookIndex = 0
-  fiber.props.children = [fiber.type()]
+  fiber.props.children = [fiber.type(fiber.props)]
 }
 
 function useState(initial) {
@@ -134,12 +137,12 @@ function useState(initial) {
   function setState(action) {
     hook.state = action(hook.state)
     wipRoot = {
-      type: currentWipRoot.type,
       props: currentWipRoot.props,
       dom: currentWipRoot.dom,
       alternate: currentWipRoot,
     }
     nextWorkFiber = wipRoot
+    removeFibers = []
   }
   
   currentHookFiber.hooks[currentHookIndex] = hook
@@ -201,15 +204,13 @@ function diffFiber(parentFiber, children) {
     }
     
     if (oldChildFiber && !isSameType) {
-      removeFibers.push({
-        fiber: oldChildFiber,
-        effectTag: "REMOVE",
-      })
+      oldChildFiber.effectTag = "REMOVE"
+      removeFibers.push(oldChildFiber)
     }
     
     if (index === 0) {
       parentFiber.child = fiber
-    } else {
+    } else if (child) {
       prevFiber.sibling = fiber
     }
     
@@ -220,7 +221,7 @@ function diffFiber(parentFiber, children) {
 }
 
 function commitRoot() {
-  removeFibers.map(commitDOM)
+  removeFibers.forEach(commitDOM)
   commitDOM(wipRoot.child)
   currentWipRoot = wipRoot
   wipRoot = null
@@ -238,9 +239,9 @@ function commitDOM(fiber) {
     parentDOM = parent.dom
   }
   
-  if (fiber.effectTag === "UPDATE") {
+  if (fiber.effectTag === "UPDATE" && fiber.dom !== null) {
     handleProps(fiber.dom, fiber.alternate && fiber.alternate.props, fiber.props)
-  } else if (fiber.effectTag === "CREATE") {
+  } else if (fiber.effectTag === "CREATE" && fiber.dom !== null) {
     parentDOM.appendChild(fiber.dom)
   } else if (fiber.effectTag === "REMOVE") {
     removeDOM(parentDOM, fiber)
