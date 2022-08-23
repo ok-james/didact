@@ -27,19 +27,51 @@ function createTextChild(text) {
 function createDOM(fiber) {
   const element = fiber.type === TEXT_CHILD_TYPE ? document.createTextNode("") : document.createElement(fiber.type)
   
-  handleProps(element, fiber.props)
+  handleProps(element, null, fiber.props)
   
   return element
 }
 
 function isProperty(key) {
-  return key !== "children"
+  return key !== "children" && !isEvent(key)
 }
 
-// Todo 可能还需要考虑事件的处理
-function handleProps(element, props) {
-  Object.keys(props).filter(isProperty).forEach((key) => {
-    element[key] = props[key]
+function isEvent(key) {
+  return key.startsWith("on")
+}
+
+function isNew(currProps, preProps) {
+  return (key) => {
+    return currProps[key] !== preProps[key]
+  }
+}
+
+function handleProps(element, preProps, currProps) {
+  preProps = preProps || {}
+  currProps = currProps || {}
+  
+  // 添加属性
+  Object.keys(currProps).filter(isProperty).filter(isNew(currProps, preProps)).forEach((key) => {
+    element[key] = currProps[key]
+  })
+  
+  // 删除属性
+  Object.keys(preProps).filter((key) => isProperty(key) && (currProps[key] === null || currProps[key] === undefined)).forEach(key => {
+    element[key] = ""
+  })
+  
+  // 添加事件
+  Object.keys(currProps).filter(isEvent).filter(isNew(currProps, preProps)).forEach((key) => {
+    let eventName = key.slice(2)
+    eventName = eventName.toLowerCase()
+    element.addEventListener(eventName, currProps[key])
+  })
+  
+  // 删除时间
+  Object.keys(preProps).filter((key) => isEvent(key) && !currProps[key]).forEach(key => {
+    let eventName = key.slice(2)
+    eventName = eventName.toLowerCase()
+    element.removeEventListener(eventName, preProps[key])
   })
 }
 
@@ -109,6 +141,9 @@ function useState(initial) {
     }
     nextWorkFiber = wipRoot
   }
+  
+  currentHookFiber.hooks[currentHookIndex] = hook
+  currentHookIndex++
   
   return [hook.state, setState]
 }
@@ -234,10 +269,19 @@ const Baby = {
 
 function App() {
   const [count, setCount] = Baby.useState(0)
+  const [color, setColor] = Baby.useState("red")
   return (
     <div>
-      <h1>{count}</h1>
-      <button onClick={setCount}>add</button>
+      <h1 style={`color:${color};`}>{count}</h1>
+      <button onClick={() => {
+        setCount((pre) => pre + 1)
+      }}>
+        add
+      </button>
+      <button onClick={() => {
+        setColor((pre) => pre === "red" ? "blue" : "red")
+      }}>color
+      </button>
     </div>
   )
 }
