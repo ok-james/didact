@@ -1,11 +1,15 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin")
-const path = require("path")
 
 module.exports = {
   mode: "development",
-  entry: "./didact.js",
+  entry: {
+    "didact": "./didact.js",
+    "baby": "./my-baby.js",
+  },
+  devtool: "source-map",
   output: {
-    filename: "index.js",
+    filename: "[name].js",
+    iife: true,
     clean: true,
   },
   module: {
